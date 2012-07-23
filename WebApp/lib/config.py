@@ -3,7 +3,7 @@ from ConfigParser import ConfigParser
 
 class lConfig (object):
     __cache = {}
-    __filename = os.path.abspath(os.path.dirname(__file__)) + '../config.ini'
+    __filename = 'config.ini'
 
     def __init__(self, sFile = ''):
         if sFile != '':

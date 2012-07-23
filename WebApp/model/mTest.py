@@ -1,0 +1,1 @@
+import BaseModelclass mTest(BaseModel):    def do(self):        pass    def getResult(self):        return range(0,10)
