@@ -1,0 +1,1 @@
+import hashlibdef get(string):    string = str(string)    sMd5  = hashlib.new("md5", string).hexdigest()    return sMd5[-4:].upper()def check(string, sign):    if get(string) == sign.upper():        return True    return False

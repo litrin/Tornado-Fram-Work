@@ -1,4 +1,5 @@
 from lib.config import CFG
+from lib import signature
 
 import tornado.httpserver
 import tornado.ioloop
@@ -25,25 +26,43 @@ class HttpFram(tornado.web.RequestHandler):
         self.APIVer = lUrl[1]
         self.Type = lUrl[2]
         self.TransCode = lUrl[3]
-    
-        self.write("hello %s " % lUrl)
+        
+        self.getRespones()
 
-    def main(self):
-        self.getTransCode()
+    def getRespones(self):
+        var = self.checkRequest()
+        self.TransCode = "%s.%s" % (self.Type, self.TransCode)
 
-    def getObjects(self):
-        sObjects = CFG().getOption('service', 'model')
-        if self.Trans not in sObjects.keys():
-            
-            lObjectList.append(('.*', Error))
-            return lObjectList
+        oClass = eval(self.TransCode)
+        result = oClass(var).do().getResult()
+        
+        self.respones(result)
+ 
+    def checkRequest(self):
+        jVar = self.get_argument('var', None)
+        sign = self.get_argument('sign', None)
+     
+        if sign is None or signature.check(var, sign) == False:
+            self.respone(HttpError.HttpError(405), 405)
+        else:
+            return None
+
+        if var is None:
+            var = {}
+        else:
+            try:
+                var = json.loads(jVar)
+            except:
+                self.respone(HttpError.HttpError(406), 406)
+        return var
 
     def response(self, body, status=200):
         if status != 200:
-            self.write_error(status)
-        self.write(json.dumps(body))
-
-        
+            self.set_status(status)
+            self.finish(json.dumps(body))
+        else:
+            fullBody = { self.TransCode : body, "sig" : signature.get(json.dumps(body))}
+            self.finish(json.dumps(fullBody)) 
        
 def service(port):
     define("port", default=port, help="run on the given port", type=int)
@@ -52,5 +71,3 @@ def service(port):
     http_server.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()
     print "Port %s service stating successful!" % port
-
-

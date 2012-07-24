@@ -1,0 +1,1 @@
+#!/bin/shPYTHON=`/usr/bin/whereis python`sudo $PYTHON server.py 
