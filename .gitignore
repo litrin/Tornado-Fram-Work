@@ -1,2 +1,7 @@
 *.pyc
 .*
+WebApp/core/server.pyc
+
+WebApp/lib/__init__.pyc
+
+WebApp/lib/config.pyc

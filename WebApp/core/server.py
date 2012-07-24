@@ -8,6 +8,7 @@ import tornado.web
 from tornado.options import define, options
 import json
 import HttpError
+from model import *
 
 class HttpFram(tornado.web.RequestHandler):
     
@@ -16,45 +17,42 @@ class HttpFram(tornado.web.RequestHandler):
     TransCode = None
 
     def get(self):
-        try:
-            self.getRequestInfo()
-        except:
-            self.response(HttpError.HttpError(404), 404)
-    
+        self.getRequestInfo()
+        self.getRespones()
+   
     def getRequestInfo(self):
         lUrl = self.request.path.split("/")
-        self.APIVer = lUrl[1]
-        self.Type = lUrl[2]
-        self.TransCode = lUrl[3]
-        
-        self.getRespones()
-
+        if len(lUrl) < 3:
+            self.response(HttpError.HttpError(404), 404)
+        else:
+            self.APIVer = lUrl[1]
+            self.Type = lUrl[2]
+            self.TransCode = lUrl[3]
+     
     def getRespones(self):
         var = self.checkRequest()
-        self.TransCode = "%s.%s" % (self.Type, self.TransCode)
+        if var is None:
+            return 
+        className = "m%s.Main" % (self.TransCode)
+        exec "oClass = "+className
+        mClass = oClass(var)
+        mClass.do()
 
-        oClass = eval(self.TransCode)
-        result = oClass(var).do().getResult()
+        result = mClass.getResult()
         
-        self.respones(result)
+        self.response(result)
  
     def checkRequest(self):
         jVar = self.get_argument('var', None)
-        sign = self.get_argument('sign', None)
-     
-        if sign is None or signature.check(var, sign) == False:
-            self.respone(HttpError.HttpError(405), 405)
-        else:
-            return None
+        sign = self.get_argument('sign', None)        
 
-        if var is None:
-            var = {}
-        else:
+        if sign is None :#or signature.check(var, sign) == False:
+            self.response(HttpError.HttpError(405), 405)
+        else:    
             try:
-                var = json.loads(jVar)
+                return json.loads(jVar)
             except:
                 self.respone(HttpError.HttpError(406), 406)
-        return var
 
     def response(self, body, status=200):
         if status != 200:
@@ -63,7 +61,7 @@ class HttpFram(tornado.web.RequestHandler):
         else:
             fullBody = { self.TransCode : body, "sig" : signature.get(json.dumps(body))}
             self.finish(json.dumps(fullBody)) 
-       
+
 def service(port):
     define("port", default=port, help="run on the given port", type=int)
     application = tornado.web.Application([(r".*",HttpFram),])

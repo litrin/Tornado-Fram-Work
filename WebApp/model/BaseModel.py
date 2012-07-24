@@ -1,1 +1,1 @@
-class BaseModel:    def __init__(self, var={}, authLevel=0):        self.var = var        self.authLevel =  authLevel    def do(self):        pass    def gerResult(self):        return {}
+class BaseModel:    def __init__(self, var, authLevel=0):        self.var = var        self.authLevel =  authLevel    def do(self):        pass    def gerResult(self):        return {}
