@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from lib.config import CFG
 from lib import signature
 
@@ -59,7 +61,8 @@ class HttpFram(tornado.web.RequestHandler):
             self.set_status(status)
             self.finish(json.dumps(body))
         else:
-            fullBody = { self.TransCode : body, "sig" : signature.get(json.dumps(body))}
+            sign = signature.get(json.dumps(body))
+            fullBody = { self.TransCode : body, "sig" : sign }
             self.finish(json.dumps(fullBody)) 
 
 def service(port):

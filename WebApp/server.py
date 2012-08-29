@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from lib.config import CFG
 import os
 from core.server import service
@@ -18,4 +20,3 @@ def start():
 
 if __name__ == "__main__":
     start()
-
