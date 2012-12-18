@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-
+#coding=utf-8
 from lib.config import CFG
-from lib import signature
 
 import tornado.httpserver
 import tornado.ioloop
@@ -9,66 +8,81 @@ import tornado.options
 import tornado.web
 from tornado.options import define, options
 import json
-import HttpError
-from model import *
+from ClientRequest import ClientRequest
+from ClientInput import ClientInput
 
 class HttpFram(tornado.web.RequestHandler):
     
-    APIVer = None
-    Type = None
-    TransCode = None
-
     def get(self):
-        self.getRequestInfo()
-        self.getRespones()
-   
-    def getRequestInfo(self):
-        lUrl = self.request.path.split("/")
-        if len(lUrl) < 3:
-            self.response(HttpError.HttpError(404), 404)
+        request = ClientRequest(self.request.path)
+
+        if request.getError() is not None:
+            self.noFound()
+
         else:
-            self.APIVer = lUrl[1]
-            self.Type = lUrl[2]
-            self.TransCode = lUrl[3]
-     
-    def getRespones(self):
-        var = self.checkRequest()
-        if var is None:
-            return 
-        className = "m%s.Main" % (self.TransCode)
-        exec "oClass = "+className
-        mClass = oClass(var)
-        mClass.do()
-
-        result = mClass.getResult()
+            clientInput = ClientInput(request.transCode, self.request.arguments)
         
-        self.response(result)
- 
-    def checkRequest(self):
-        jVar = self.get_argument('var', None)
-        sign = self.get_argument('sign', None)        
+            if request.controllerPerpare(clientInput.fliter()):
+                self.callFunctionAsync(request, callback = self.responseAsync)
+            else:
+                (content, status) = self.callFunction(request)
+                self.response(content, status)
+            
+    def callFunction(self, Function):
+        self.checkClient()
+        Function.controllerOperation()
+        # try:
+        self.checkClient()
+        content = Function.controllerResult()
+        status  = Function.getStatus()
+        # except:
+        #     content = {}
+        #     status  = 500
 
-        if sign is None :#or signature.check(var, sign) == False:
-            self.response(HttpError.HttpError(405), 405)
-        else:    
-            try:
-                return json.loads(jVar)
-            except:
-                self.respone(HttpError.HttpError(406), 406)
-
-    def response(self, body, status=200):
+        return (content, status)
+    
+    def noFound(self):
+        body  = {'ret': -1, 'msg': 'Page no Found'}
+        error = 404
+        
+        self.response(body, 404)
+        
+    def checkClient(self):
+        if self.request.connection.stream.closed(): 
+            self.clear()
+            
+    # call the controller layer functions
+    @tornado.web.asynchronous    
+    def callFunctionAsync(self, Function, callback):
+        self.checkClient()
+        (content, status) = self.callFunction(Function)
+        self.checkClient()
+        callback(content, status)
+            
+    # Webview Builder for json format
+    def response(self, body={}, status=200, async=False):
+        self.checkClient()
         if status != 200:
             self.set_status(status)
-            self.finish(json.dumps(body))
-        else:
-            sign = signature.get(json.dumps(body))
-            fullBody = { self.TransCode : body, "sig" : sign }
-            self.finish(json.dumps(fullBody)) 
+        body = json.dumps(body, ensure_ascii=False, encoding="utf-8")
+        if async: 
+            self.finish(body)
+        else: 
+            self.write(body)
+        
+    @tornado.web.asynchronous
+    def responseAsync(self, body={}, status=200):
+        self.response(body, status, True)
 
 def service(port):
     define("port", default=port, help="run on the given port", type=int)
-    application = tornado.web.Application([(r".*",HttpFram),])
+    ver = CFG.getOption('service', 'ver') 
+    apiUrl = "/%s/.*" % ver  
+    application = tornado.web.Application([(apiUrl, HttpFram)])
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()
     print "Port %s service stating successful!" % port
+
+
+

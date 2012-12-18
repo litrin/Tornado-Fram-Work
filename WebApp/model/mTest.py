@@ -1,1 +1,0 @@
-from BaseModel import BaseModelclass Main(BaseModel):    def do(self):        pass    def getResult(self):        return range(0,10)

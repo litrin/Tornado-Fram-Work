@@ -1,50 +1,33 @@
 import redis
 import random
+from lib.config import CFG 
 
 __all__ = ['KeyValue', "Queue", "Counter", "KeyList", "HashTable", "SortSet"]
 
 class redisPool(object):
     _pool ={}
-    
-    poolSize = 1
-    
-    def __init__(self, host):
-        if host not in self._cache.keys() or len(self._cache[host]) == 0:
-            self._pool[host] = []
-            for i in range(0, self.poolSize):
-                self._pool[host].append(self.connect(host))            
 
+#
+#   waitting for the offical bug fix for redis connection pool broken
+#
+#    def getConnect(self, host, db=0):
+#        if host not in self._pool.keys():
+#            self._pool[host] = redis.ConnectionPool(host)
+#
+#        handle = redis.Redis(connection_pool = self._pool[host], db=db)
+#        return handle
 
-    def __del__(self):
-        for key in self._pool.keys():
-            for handle in self._pool[key]:
-                handle.close()
-
-    def connect(self, host):        
-        try:
-            handle=redis.Redis(host, port=port, db=db)
-        except:
-            errorMessage = "Can't connect to %s:%s/%s" % (host, port, db)
-            raise IOException, errorMessage
-        
-        return handle
-        
-    def getConnect(self, host, db=0):
-        rand = random.randint(0, self.poolSize + 1)
-        handle = self._pool[host][rand]
-        
-        handle.select(db)
-        
-        return handle
+    def getConnect(self, hostName, db):
+        host = CFG.getSection(hostName)
+        return redis.Redis(host=host['host'], port=int(host['port']), db=db)
 
 class redisHandle:
 
-    handle = None    
+    handle = None
     _keyPre = "%s"
     
     def __init__(self, host, db=0):
-        pool = redisPool(host)
-        self.handle = pool.getConnect(host, db)
+        self.handle = redisPool().getConnect(host, db=db)
             
     def getKey(self, key):
         return self._keyPre % key
@@ -72,11 +55,16 @@ class KeyValue(redisHandle):
         key = self.getKey(key)
         value = int(value)
         
-        return self.handle.incrby(key, value)
+        return self.handle.incr(key, value)
         
 class Counter(KeyValue):
     _keyPre = "c%s"
-    add = incr
+    
+    def add(self, key):
+        key = self.getKey(key)
+        return self.handle.incr(key, 1)
+
+    incr = add
 
 class Queue(redisHandle):
     _keyPre = "q%s"

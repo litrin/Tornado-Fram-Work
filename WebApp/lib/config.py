@@ -9,6 +9,9 @@ class lConfig (object):
         if sFile != '':
             self.__filename = sFile
 
+        self.getConfig(sFile)
+
+    def getConfig(self, sFile):
         config = ConfigParser()
         config.read(self.__filename)
         
@@ -16,12 +19,6 @@ class lConfig (object):
             self.__cache[section] = {}
             for option in config.options(section):
                 self.__cache[section][option] = config.get(section, option)
-
-    def __getattr__(self, section):
-        if self.__cache.has_key(section):
-            return self.__cache[section]
-        else:
-            return {}
 
     def getSection(self, section):
         if self.__cache.has_key(section):
@@ -31,6 +28,7 @@ class lConfig (object):
             raise NameError, errorMessage
 
     def getOption(self, section, option):
+        option = option.lower()
         if self.__cache.has_key(section) and self.__cache[section].has_key(option):
             return self.__cache[section][option]
         else:
@@ -47,5 +45,6 @@ class lConfig (object):
 
         return string
 
-class CFG(lConfig):
-    pass
+#regest a global var
+CFG = lConfig()
+
